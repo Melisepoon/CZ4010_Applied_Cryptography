@@ -35,7 +35,7 @@ def mod_inverse(e, phi_n):
 
 
 def rsa_factorization_attack(e, n):
-    """Perform an RSA attack using factorization."""
+    """Perform an RSA attack using pollard rho."""
     #print(f"Attempting to factorize n={n}...")
     p, q = factorize_n(n)
     if not p or not q:
