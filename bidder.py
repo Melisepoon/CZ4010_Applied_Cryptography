@@ -68,7 +68,7 @@ if __name__ == "__main__":
     PORT = 53140  # Auctioneer's port
 
     # Load the public key from the specified file
-    PUBLIC_KEY_FILE = "/Users/xingkun/Desktop/CZ4010_Applied_Cryptography-main/public_key.txt"
+    PUBLIC_KEY_FILE = "public_key.txt"
     PUBLIC_KEY = load_public_key(PUBLIC_KEY_FILE)
 
 

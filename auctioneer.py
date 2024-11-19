@@ -9,7 +9,7 @@ import time
 # Define global constants
 MIN_PRIME = 2**80
 MAX_PRIME = 2**81 - 1
-BITS = 256
+BITS = 68
 HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
 PORT = 53140  # Port to listen on (non-privileged ports are > 1023)
 AUCTION_DURATION = 60  # Auction duration in seconds
@@ -33,7 +33,7 @@ class Auctioneer:
     
     def write_public_key_to_file(self):
         """Write the public key to a file."""
-        with open("/Users/xingkun/Desktop/CZ4010_Applied_Cryptography-main/public_key.txt", "w") as file:
+        with open("public_key.txt", "w") as file:
             file.write(str(self.public_key))
         print("Public key written to public_key.txt")
     
@@ -72,7 +72,7 @@ class Auctioneer:
             # Decrypt the bid
             decrypted_bid = self.decrypt_bid(encrypted_list)
             #print(f"Decrypted bid received: {decrypted_bid}")
-            with open("/Users/xingkun/Desktop/CZ4010_Applied_Cryptography-main/bid_messages.txt", "a") as file:
+            with open("bid_messages.txt", "a") as file:
                 file.write(f"Decrypted Message: {encrypted_list}\n")
             # Parse the decrypted bid
             hashed_name, price = decrypted_bid.split(":")
@@ -80,7 +80,7 @@ class Auctioneer:
 
             # Store the bid for later processing
             self.bids.append((hashed_name, price))
-            print(f"Stored bid: Hashed Name: {hashed_name}, Price: {price}")
+            print(f"Stored bid: Hashed Name: {hashed_name}, Price: {price}\n")
 
         except Exception as e:
             print(f"Error handling client: {e}")
@@ -98,7 +98,7 @@ class Auctioneer:
 
             # Decrypt the list of integers
             decrypted_integers = self.rsa.decrypt(encrypted_list)
-            print(f"Decrypted numbers: {decrypted_integers}")
+            #print(f"Decrypted numbers: {decrypted_integers}")
 
             # Convert decrypted integers into a single string
             decrypted_message = ''
@@ -107,7 +107,7 @@ class Auctioneer:
                 num_bytes = num.to_bytes((num.bit_length() + 7) // 8, byteorder='big')
                 # Decode bytes into UTF-8 strings and concatenate
                 decrypted_message += num_bytes.decode('utf-8', errors='replace')
-            print(f"Decrypted message: {decrypted_message}")
+            #print(f"Decrypted message: {decrypted_message}")
             return decrypted_message
         except Exception as e:
             print(f"Decryption error: {e}")
@@ -126,7 +126,7 @@ class Auctioneer:
         winner_hash, winning_price = self.bids[0]
         second_highest_price = self.bids[1][1] if len(self.bids) > 1 else winning_price
         print(f"Winner's Hash: {winner_hash}, Winning Price: {second_highest_price}")
-        with open("/Users/xingkun/Desktop/CZ4010_Applied_Cryptography-main/auction_results.txt", "w") as file:
+        with open("auction_results.txt", "w") as file:
             file.write(f"Winner's Hash: {winner_hash}, Winning Price: {second_highest_price}\n")
         print("Auction results written to auction_results.txt")
 
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     auctioneer = Auctioneer()
     
     # Path to the file storing received bids
-    BID_MESSAGES_FILE = "/Users/xingkun/Desktop/CZ4010_Applied_Cryptography-main/bid_messages.txt"
+    BID_MESSAGES_FILE = "bid_messages.txt"
 
     # Clear the file before starting a new auction
     auctioneer.clear_message_file(BID_MESSAGES_FILE)
