@@ -2,6 +2,8 @@ import random
 import math
 import secrets
 from sympy import isprime
+from math import isqrt # added
+from gmpy2 import powmod
 
 
 # e has to start from 3
@@ -91,68 +93,171 @@ class RSA:
         return x1
 
     def generate_e(self):
-        """Generate a public exponent e."""
-        e = random.randint(3, self.phi_n - 1)
-        while math.gcd(e, self.phi_n) != 1:
-            e = random.randint(3, self.phi_n - 1)
-        return e
+        """Generate a public exponent e with constraints for Wiener's attack."""
+        while True:  # Keep retrying until a valid e is generated
+            lower_bound = max(int(self.phi_n / (3 * (self.n ** (1 / 4)))), 3)
+            upper_bound = self.phi_n - 1
+
+            # Check if the range is valid
+            if lower_bound < upper_bound:
+                e = random.randint(lower_bound, upper_bound)
+                while math.gcd(e, self.phi_n) != 1:
+                    e = random.randint(lower_bound, upper_bound)
+                print(f"Generated e: {e}")
+                print(f"Bit size of e: {e.bit_length()}")
+                return e
+            else:
+                print(f"Invalid range for e: lower_bound={lower_bound}, upper_bound={upper_bound}. Regenerating primes...")
+                return None  # Signal to regenerate keys
+
+    def calculate_e(self, wiener_threshold):
+        """Calculate a public exponent e such that d is vulnerable to Wiener's attack."""
+        n_quarter_root = isqrt(isqrt(self.n))  # Approximation of n^(1/4)
+
+        print(f"Calculated Wiener's threshold: {wiener_threshold}, n^(1/4): {n_quarter_root}")
+
+        # Iterate over potential values of d
+        for d in range(3, wiener_threshold):
+            if math.gcd(d, self.phi_n) == 1:  # Ensure d is coprime with φ(n)
+                try:
+                    # Calculate e as the modular inverse of d mod φ(n)
+                    e = pow(d, -1, self.phi_n)
+                    # Validate e: Ensure it's large enough and gcd(e, φ(n)) = 1
+                    if e > self.n ** (3 / 4) and math.gcd(e, self.phi_n) == 1:
+                        print(f"Mathematically calculated e: {e}, d: {d}")
+                        return e, d
+                except ValueError:
+                    continue  # Skip if modular inverse fails
+        raise ValueError("Failed to calculate a suitable e.")
+
     
     def generate_keys(self, min_value=1000, max_value=5000):
-        self.p = self.generate_prime(min_value, max_value)
-        self.q = self.generate_prime(min_value, max_value)
-        while self.p == self.q:
+        while True:
+            self.p = self.generate_prime(min_value, max_value)
             self.q = self.generate_prime(min_value, max_value)
+            while self.p == self.q:
+                self.q = self.generate_prime(min_value, max_value)
 
-        self.n = self.p * self.q
-        self.phi_n = (self.p - 1) * (self.q - 1)
+            self.n = self.p * self.q
+            self.phi_n = (self.p - 1) * (self.q - 1)
 
-        self.e = self.generate_e()
-        self.d = self.mod_inverse(self.e, self.phi_n)
+            self.e = self.calculate_e()
+            self.d = self.mod_inverse(self.e, self.phi_n)
+
+            # Calculate Wiener's attack threshold
+            wiener_threshold = int((1/3) * (self.n ** 0.25))
+
+            # Compare d with numeric Wiener's threshold
+            if self.d < wiener_threshold:
+                # Print debug information
+                print(f"Bit size of e: {self.e.bit_length()}")
+                print(f"Bit size of d: {self.d.bit_length()}, d: {self.d}")
+                print(f"Bit size of n: {self.n.bit_length()}")
+                print(f"Wiener's threshold (numeric): {wiener_threshold}")
+                break
+            else:
+                print(f"d ({self.d}) is too big. Regenerating keys for Wiener's attack...")
+
         return (self.e, self.n), (self.d, self.n)
 
     #faster version to generate keys
-    def generate_keysv2(self,bits):
-        self.p = self.generate_secure_prime(bits)
-        self.q = self.generate_secure_prime(bits)
-        while self.p == self.q:
-            self.q = self.generate_secure_prime(bits)
+    def generate_keysv2(self, bits):
+        """Generate RSA keys adjusted to ensure d is vulnerable to Wiener's attack."""
+        while True:
+            self.p = self.generate_secure_prime(bits // 2)
+            self.q = self.generate_secure_prime(bits // 2)
+            while self.p == self.q:
+                self.q = self.generate_secure_prime(bits // 2)
 
-        self.n = self.p * self.q
-        self.phi_n = (self.p - 1) * (self.q - 1)
+            self.n = self.p * self.q
+            self.phi_n = (self.p - 1) * (self.q - 1)
 
-        self.e = self.generate_e()
-        self.d = self.mod_inverse(self.e, self.phi_n)
-        return (self.e, self.n), (self.d, self.n)
+            # Calculate Wiener's threshold
+            wiener_threshold = max(int((1 / 3) * isqrt(isqrt(self.n))), 3)
+
+            try:
+                self.e, self.d = self.calculate_e(wiener_threshold)
+            except ValueError:
+                print("Failed to find suitable e. Regenerating keys...")
+                continue
+
+            if self.d < wiener_threshold:
+                print(f"Generated keys:")
+                print(f"  Bit size of p: {self.p.bit_length()}")
+                print(f"  Bit size of q: {self.q.bit_length()}")
+                print(f"  Bit size of n: {self.n.bit_length()}")
+                print(f"  Bit size of e: {self.e.bit_length()}")
+                print(f"  Bit size of d: {self.d.bit_length()} ({self.d})")
+                print(f"  Wiener's threshold (numeric): {wiener_threshold}")
+                return (self.e, self.n), (self.d, self.n)
+            else:
+                print(f"d ({self.d}) is too big. Regenerating keys for Wiener's attack...")
 
     def encrypt(self, plaintext):
         """
-        Encrypt a plaintext message.
+        Encrypt a plaintext message using the public key (e, n).
         Args:
             plaintext (str): The message to be encrypted.
         Returns:
             list: The encrypted message as a list of integers.
         """
-        # make message ASCII character  
-        message_encoded = [ord(ch) for ch in plaintext]
-        # c = (m^e) mod n
-        # encrypting in per character basis, bcos require m<n
-        # this is a list
-        cipher_text = [pow(ch, self.e, self.n) for ch in message_encoded]
+        block_size = self.n.bit_length() // 8 - 1  # Determine block size
+        plaintext_bytes = plaintext.encode()
+        cipher_text = []
+
+        for i in range(0, len(plaintext_bytes), block_size):
+            block = int.from_bytes(plaintext_bytes[i:i+block_size], byteorder='big')
+            encrypted_block = pow(block, self.e, self.n)
+            cipher_text.append(encrypted_block)
+
         return cipher_text
+
+
+
+    def decrypted_numbers_to_bytes(self, decrypted_numbers):
+        """
+        Convert decrypted numbers into bytes safely, and decode them into a string.
+        Args:
+            decrypted_numbers: List of decrypted integers.
+        Returns:
+            str: Decoded plaintext message.
+        """
+        try:
+            decoded_message = []
+            for num in decrypted_numbers:
+                # Convert each number into bytes
+                num_bytes = num.to_bytes((num.bit_length() + 7) // 8, byteorder='big')
+                # Decode the bytes to string, replacing invalid characters
+                decoded_message.append(num_bytes.decode('utf-8', errors='replace'))
+            # Join decoded parts into a single message
+            return ''.join(decoded_message)
+        except Exception as e:
+            print(f"Error converting decrypted numbers to bytes: {e}")
+            raise
+
 
     def decrypt(self, cipher_text):
         """
-        Decrypt a cipher text message.
+        Decrypt a cipher text message using the private key (d, n).
         Args:
-            cipher_text (list): The encrypted message as a list of integers.
+            cipher_text: The encrypted message as a list of integers or a comma-separated string of integers.
         Returns:
-            str: The decrypted plaintext message.
+            list: Decrypted integers.
         """
-        # make message ASCII character
-        message_encoded = [pow(ch, self.d, self.n) for ch in cipher_text]
-        # m = (c^d) mod n
-        plaintext = "".join(chr(ch) for ch in message_encoded)
-        return plaintext
+        try:
+            # Convert cipher text from string to list of integers if needed
+            if isinstance(cipher_text, str):
+                cipher_text = list(map(int, cipher_text.split(',')))
+
+            # Decrypt each integer in the cipher text
+            decrypted_numbers = [pow(ch, self.d, self.n) for ch in cipher_text]
+            #print(f"Decrypted numbers: {decrypted_numbers}")
+            return decrypted_numbers
+        except Exception as e:
+            print(f"Decryption error: {e}")
+            raise
+
+
 
     def get_public_key(self):
         """Return the public key."""
@@ -173,7 +278,7 @@ rsa = RSA()
 
 # Generate a 512-bit prime number
 prime_number = rsa.generate_secure_prime(256)
-print(prime_number)
+#print(prime_number)
 
 # rsa.generate_keys(min_value=1000, max_value=5000)
 

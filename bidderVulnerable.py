@@ -1,18 +1,30 @@
 import socket
-from hash import keccak_hash
+import os
+from hash import keccak_hash, md5_hash, sha256_hash,truncate_hash
 from rsa import RSA
 import ast  # For safely parsing the public key file content
+# to truncate hash length to demonstrate vulnerability
+BIT_SIZE = 16
 
 class Bidder:
+    USED_NAMES_FILE = "used_names.txt"  # Shared file for plaintext names
+
     def __init__(self, public_key, host, port):
         self.rsa = RSA()
         self.rsa.e, self.rsa.n = public_key
         self.host = host  # Auctioneer's host
         self.port = port  # Auctioneer's port
 
-    def get_bid_from_user(self):
+    # truncate hash of bid from user to designated bit size
+    def get_bid_from_user_vulnerable(self):
         """Prompt the user to input their name and bid amount."""
-        name = input("Enter your name: ")
+        while True:
+            name = input("Enter your name: ")
+            if self.is_duplicate_name(name):
+                print("This name has already been used. You are not eligible to bid.")
+                continue  # Prompt for another name
+            break
+
         while True:
             try:
                 price = int(input("Enter your bid amount: "))
@@ -21,10 +33,28 @@ class Bidder:
                 break
             except ValueError as e:
                 print(f"Invalid input: {e}")
-        hashed_name = keccak_hash(name)  # Hash the name
-        bid_data = f"{hashed_name}:{price}"
+            # Select the hash function to use
+        print("Choose the hash function: 1) MD5, 2) SHA-256, 3) Keccak-256")
+        choice = input("Enter your choice (1/2/3): ").strip()
+        hash_function = md5_hash if choice == "1" else sha256_hash if choice == "2" else keccak_hash
+        hashed_name = hash_function(name)  # Hash the name
+        truncated_hashed_name = truncate_hash(hashed_name, BIT_SIZE)
+        bid_data = f"{truncated_hashed_name}:{price}"
         return bid_data
 
+    def is_duplicate_name(self, name):
+        """Check if the plaintext name is already in the shared file."""
+        if os.path.exists(self.USED_NAMES_FILE):
+            with open(self.USED_NAMES_FILE, "r") as file:
+                used_names = file.read().splitlines()
+                if name in used_names:
+                    return True
+
+        # Add the name to the file if it's not a duplicate
+        with open(self.USED_NAMES_FILE, "a") as file:
+            file.write(name + "\n")
+        return False
+    
     def encrypt_bid(self, bid_data):
         """Encrypt the bid using the auctioneer's public key."""
         # Convert the bid data string into a list of encrypted integers
@@ -71,15 +101,13 @@ if __name__ == "__main__":
     PUBLIC_KEY_FILE = "public_key.txt"
     PUBLIC_KEY = load_public_key(PUBLIC_KEY_FILE)
 
-
     # Initialize a bidder
     bidder = Bidder(PUBLIC_KEY, HOST, PORT)
 
     # Get the bid from the user
-    bid = bidder.get_bid_from_user()
+    bid = bidder.get_bid_from_user_vulnerable()
     encrypted_bid = bidder.encrypt_bid(bid)
     print(f"Your Bid: {bid}")
-    #print(f"Encrypted Bid: {encrypted_bid}")
 
     # Send the encrypted bid to the auctioneer
     bidder.send_bid(encrypted_bid)
