@@ -116,10 +116,8 @@ class RSA:
         self.q = self.generate_secure_prime(bits)
         while self.p == self.q:
             self.q = self.generate_secure_prime(bits)
-
         self.n = self.p * self.q
         self.phi_n = (self.p - 1) * (self.q - 1)
-
         self.e = self.generate_e()
         self.d = self.mod_inverse(self.e, self.phi_n)
         return (self.e, self.n), (self.d, self.n)

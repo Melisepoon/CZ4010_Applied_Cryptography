@@ -59,15 +59,15 @@ if __name__ == "__main__":
 
     # Select hashing method
     print("Select hash method:")
-    print("1. Keccak")
+    print("1. MD5")
     print("2. SHA-256")
-    print("3. MD5")
+    print("3. Keccak")
     choice = input("Enter your choice (1/2/3): ").strip()
 
     hash_method = {
-        "1": "keccak",
+        "1": "md5",
         "2": "sha256",
-        "3": "md5"
+        "3": "keccak"
     }.get(choice, "keccak")  # Default to Keccak if input is invalid
 
     # Initialize the checker

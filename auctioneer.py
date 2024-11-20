@@ -9,7 +9,7 @@ import time
 # Define global constants
 MIN_PRIME = 2**80
 MAX_PRIME = 2**81 - 1
-BITS = 16
+BITS = 1024
 HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
 PORT = 53140  # Port to listen on (non-privileged ports are > 1023)
 AUCTION_DURATION = 30  # Auction duration in seconds

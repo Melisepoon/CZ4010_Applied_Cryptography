@@ -114,7 +114,7 @@ class RSA:
         """Calculate a public exponent e such that d is vulnerable to Wiener's attack."""
         n_quarter_root = isqrt(isqrt(self.n))  # Approximation of n^(1/4)
 
-        print(f"Calculated Wiener's threshold: {wiener_threshold}, n^(1/4): {n_quarter_root}")
+        # print(f"Calculated Wiener's threshold: {wiener_threshold}, n^(1/4): {n_quarter_root}")
 
         # Iterate over potential values of d
         for d in range(3, wiener_threshold):
@@ -124,7 +124,7 @@ class RSA:
                     e = pow(d, -1, self.phi_n)
                     # Validate e: Ensure it's large enough and gcd(e, φ(n)) = 1
                     if e > self.n ** (3 / 4) and math.gcd(e, self.phi_n) == 1:
-                        print(f"Mathematically calculated e: {e}, d: {d}")
+                        # print(f"Mathematically calculated e: {e}, d: {d}")
                         return e, d
                 except ValueError:
                     continue  # Skip if modular inverse fails
@@ -182,13 +182,13 @@ class RSA:
                 continue
 
             if self.d < wiener_threshold:
-                print(f"Generated keys:")
-                print(f"  Bit size of p: {self.p.bit_length()}")
-                print(f"  Bit size of q: {self.q.bit_length()}")
-                print(f"  Bit size of n: {self.n.bit_length()}")
-                print(f"  Bit size of e: {self.e.bit_length()}")
-                print(f"  Bit size of d: {self.d.bit_length()} ({self.d})")
-                print(f"  Wiener's threshold (numeric): {wiener_threshold}")
+                # print(f"Generated keys:")
+                # print(f"  Bit size of p: {self.p.bit_length()}")
+                # print(f"  Bit size of q: {self.q.bit_length()}")
+                # print(f"  Bit size of n: {self.n.bit_length()}")
+                # print(f"  Bit size of e: {self.e.bit_length()}")
+                # print(f"  Bit size of d: {self.d.bit_length()} ({self.d})")
+                # print(f"  Wiener's threshold (numeric): {wiener_threshold}")
                 return (self.e, self.n), (self.d, self.n)
             else:
                 print(f"d ({self.d}) is too big. Regenerating keys for Wiener's attack...")

@@ -13,7 +13,7 @@ from hash import keccak_hash, sha256_hash, md5_hash, truncate_hash
 # pre image resistant: have hash, try to find ORIGINAL input
 # second preimage resistant: have hash, try to find another input that produces same hash
 
-MAX_ATTEMPTS = 2**64//2
+MAX_ATTEMPTS = 2**128//2
 
 def load_and_truncate_hash(file_path, bits):
     """
@@ -57,11 +57,10 @@ def brute_force_attack(target_hash, hash_function, truncation_bits, max_attempts
     for attempt in range(max_attempts):
         candidate = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
         computed_hash = hash_function(candidate)[:hash_length]
-        # print(f"Attempt {attempt + 1}: Testing candidate: {candidate}, Hash: {computed_hash}")
+        print(f"Attempt {attempt + 1}: Testing candidate: {candidate}, Hash: {computed_hash}")
         if computed_hash == target_hash:
             return candidate
     return None
-
 
 
 # Birthday Attack (collision attack)
@@ -101,13 +100,14 @@ if __name__ == "__main__":
     result = brute_force_attack(truncated_hash, hash_function, bits)
     if result:
         print(f"Brute-force attack succeeded! Input: {result}")
+        verify_result = hash_function(result)
+        truncate_result = truncate_hash(verify_result,bits)
+        print(f"Verify hash:  {truncate_result}")
     else:
         print("Brute-force attack failed.")
 
     # test brute for input
-    verify_result = hash_function(result)
-    truncate_result = truncate_hash(verify_result,bits)
-    print(f"Verify hash:  {truncate_result}")
+
     
     
     # Perform birthday attack
